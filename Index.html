@@ -143,7 +143,10 @@
       	            .attr('fill', 'red');
 
                     d3.select("h3")
-                    .text(this.__data__['nkillter']+" people dead and " + this.__data__['nwoundte']+" wounded in " + this.__data__['country_txt'] + " in " + this.__data__['iyear'] );
+                    .text(this.__data__['country_txt'] + " in " + this.__data__['iyear'] +
+                    ", "+ this.__data__['counts'] + " times terrorist attacks."
+                    + " Number of deaths: "+ this.__data__['nkillter']+"; Number of woundeds: "
+                    + this.__data__['nwoundte'] );
 
                   })
                   .on('mouseout',function () {
@@ -159,8 +162,7 @@
 
 
              }
-            show_all();
-debugger;
+          //  show_all();
             var data = data;
 
             function key_func(d) {
@@ -200,8 +202,11 @@ debugger;
            	           .duration(10)
            	            .attr('fill', 'red');
 
-                         d3.select("h3")
-                         .text(this.__data__['nkillter']+" people dead and " + this.__data__['nwoundte']+" wounded in " + this.__data__['country_txt'] + " in " + this.__data__['iyear'] );
+                   d3.select("h3")
+                      .text(this.__data__['country_txt'] + " in " + this.__data__['iyear'] +
+                      ", "+ this.__data__['counts'] + " times terrorist attacks."
+                      + " Number of deaths: "+ this.__data__['nkillter']+"; Number of woundeds: "
+                      + this.__data__['nwoundte'] );
 
                        })
                        .on('mouseout',function () {
@@ -218,7 +223,7 @@ debugger;
 
             }
 
-            var year_idx = 40;
+            var year_idx = 0;
 
 
 
@@ -266,6 +271,13 @@ debugger;
 
                   totalButton.on("click", function(d) {
                       d3.select(".years_buttons")
+                        .selectAll("div")
+                        .transition()
+                        .duration(200)
+                        .style("color", "black")
+                        .style("background", "lightBlue");
+
+                      d3.select(".years_buttons2")
                         .selectAll("div")
                         .transition()
                         .duration(200)
