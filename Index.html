@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <script src="http://d3js.org/d3.v3.min.js"></script>
+  <script src="//d3js.org/d3.geo.projection.v0.min.js"></script>
     <style>
     h2 {
       text-align: center;
@@ -12,11 +13,11 @@
       text-align: center;
       color: gray;
     }
+
     div.years_buttons {
       position: absolute;
       bottom: 10px;
       left :20px
-
     }
 
     div.years_buttons2 {
@@ -40,11 +41,11 @@
 
     button.total_button{
       position: absolute;
-      top: 60px;
-      right:20px;
+      top: 80px;
+      right:40px;
 
       background-color:  rgb(173,216,230);
-      padding: 4px;
+      padding: 10px;
       margin: 7px;
     }
 
@@ -55,8 +56,6 @@
         var margin = 75,
             width = 1400 - margin,
             height = 600 - margin;
-
-
 
         d3.select("body")
           .append("h2")
@@ -78,13 +77,13 @@
               years.push(i);
           }
 
-
-        var projection = d3.geo.mercator()
-                               .scale(140)
-                               .translate([width / 2, height / 1.2]);
+        var projection = d3.geo.winkel3()
+                               .scale(200)
+                               .translate([width / 2.3, height / 1.4]);
 
         var path = d3.geo.path().projection(projection);
 
+        // draw map
         var map = svg.selectAll('path')
                      .data(geo_data.features)
                      .enter()
@@ -94,180 +93,246 @@
                      .style('stroke', 'black')
                      .style('stroke-width', 0.5);
 
-
         function plot_points(data) {
 
-            var severe_max = d3.max(data, function(d) {
-                return d.severe;
-            });
+          var data = data;
 
-            var radius = d3.scale.sqrt()
-                           .domain([0, severe_max])
-                           .range([1, 5]);
+          var severe_max = d3.max(data, function(d) {
+              return d.severe;
+          });
 
+          var radius = d3.scale.sqrt()
+                          .domain([0, severe_max])
+                          .range([1, 7]);
 
+          function add_legend(){
+            // add legend to indicate circle size
+            var legend_cir = [
+              {"cx": 105, "cy": 50, "person": 1 },
+              {"cx": 130, "cy": 50, "person": 100 },
+              {"cx": 170, "cy": 50, "person": 1000 }
+            ];
 
-          var gg = svg.append('g')
-             .attr("class", "bubble");
+            var legend_svg = d3.select("svg")
+                              .append("svg")
+                              .attr("width", 1200)
+                              .attr("height", 500);
 
-          function show_all(){
+            legend_svg.selectAll('circle')
+                .data(legend_cir)
+                .enter()
+                .append('circle')
+                .attr('cx',function(d){return d.cx;})
+                .attr('cy',function(d){return d.cy;})
+                .attr('r',function(d){return radius(d.person);})
+                .attr('fill', 'rgb(247, 148, 32)')
+                .attr('stroke', 'black')
+                .attr('stroke-width', 0.7)
+                .attr('opacity', 0.5);
 
-            d3.select("h2")
-              .text("Global Terrorist Attacks in 1970 - 2016" );
+            legend_svg.selectAll('text')
+                .data(legend_cir)
+                .enter()
+                .append('text')
+                .attr('x',function(d){return d.cx-3;})
+                .attr('y',function(d){return d.cy+30;})
+                .text(function(d){return d.person;})
+                .attr("font-family", "sans-serif")
+                .attr("font-size", "10px")
+                .attr("fill", "black");
 
+            legend_svg.append('text')
+                .attr('x',105)
+                .attr('y',20)
+                .text("Casualties(no. person):")
+                .attr("font-family", "sans-serif")
+                .attr("font-size", "12px")
+                .attr("fill", "black");
+          }
 
-          //  svg.append('g')
-          //     .attr("class", "bubble")
-            gg.selectAll("circle")
-               .data(data)
-               .enter()
-               .append("circle")
-               .transition()
-               .duration(150)
-               .attr('cx', function(d) { return projection([+d.longitude, +d.latitude])[0]; })
-               .attr('cy', function(d) { return projection([+d.longitude, +d.latitude])[1]; })
-               .attr('r', function(d) {
-                 if(d.severe==""){return 1;}
-                    return radius(d.severe);
+             function agg_country(leaves){
+               // show all casualties in 1970-2016 on each countries;
+               // grouped by year
+
+               var all_nkillter = d3.sum(leaves, function(d){
+                 return d['nkillter'];
                })
-               .attr('fill', 'rgb(247, 148, 32)')
-               .attr('stroke', 'black')
-               .attr('stroke-width', 0.7)
-               .attr('opacity', 0.5)
 
-               gg.selectAll("circle")
-               .on('mouseover',function() {
-                 d3.select(this)
-      	          .transition()
-      	           .duration(10)
-      	            .attr('fill', 'red');
+               var all_nwoundte = d3.sum(leaves, function(d){
+                 return d['nwoundte'];
+               })
 
-                    d3.select("h3")
-                    .text(this.__data__['country_txt'] + " in " + this.__data__['iyear'] +
-                    ", "+ this.__data__['counts'] + " times terrorist attacks."
-                    + " Number of deaths: "+ this.__data__['nkillter']+"; Number of woundeds: "
-                    + this.__data__['nwoundte'] );
+               var all_counts = d3.sum(leaves, function(d){
+                 return d['counts'];
+               })
 
-                  })
-                  .on('mouseout',function () {
-                    d3.select(this)
-                    .transition()
-                    .duration(10)
-                    .attr('fill', 'rgb(247, 148, 32)');
+               var all_severe = d3.sum(leaves, function(d){
+                 return d['severe'];
+               })
 
-                    d3.select("h3")
-                    .text("mouse over a circle to see the number of casualties");
-                  });
+               var all_long = d3.mean(leaves, function(d){
+                 return d['longitude'];
+               })
 
+               var all_lat = d3.mean(leaves, function(d){
+                 return d['latitude'];
+               })
 
-
+               return{
+                 'nkillter':all_nkillter,
+                 'nwoundte':all_nwoundte,
+                 'counts':all_counts,
+                 'severe':all_severe,
+                 'longitude':all_long,
+                 'latitude':all_lat
+               }
              }
-          //  show_all();
-            var data = data;
 
-            function key_func(d) {
-                return d['key'];
-            }
+             function show_all_year(){
+               // show all casualties in 1970-2016 on each countries;
+                d3.select("h2")
+                  .text("Global Terrorist Attacks in 1970 - 2016" );
 
-            function update(year){
+                // create nested data using 'country_txt' as key
+                var nested = d3.nest()
+                               .key(function(d) {
+                                  return d['country_txt'];
+                               })
+                               .rollup(agg_country)
+                               .entries(data);
 
+                svg.selectAll('circle').remove();
 
+                svg.selectAll('circle')
+                  .data(nested)
+                  .enter()
+                  .append("circle")
+                  .transition()
+                  .duration(150)
+                  .attr('cx', function(d) { return projection([+d.values.longitude, +d.values.latitude])[0]; })
+                  .attr('cy', function(d) { return projection([+d.values.longitude, +d.values.latitude])[1]; })
+                  .attr('r', function(d) {
+                      if(d.values.severe==""){return 1;}
+                      return radius(d.values.severe);
+                  })
+                  .attr('fill', 'rgb(247, 148, 32)')
+                  .attr('stroke', 'black')
+                  .attr('stroke-width', 0.7)
+                  .attr('opacity', 0.5);
 
-              d3.select("h2")
-                .text("Global Terrorist Attacks in " + year);
+                svg.selectAll("circle")
+                  .on('mouseover',function() {
+                      d3.select(this)
+                        .transition()
+                        .duration(10)
+                        .attr('fill', 'red');
 
+                      d3.select("h3")
+                        .text(this.__data__['key'] +
+                            ", "+ this.__data__.values['counts'] + " times terrorist attacks,"
+                            + " number of deaths: "+ parseInt(this.__data__.values['nkillter'])+"; number of woundeds: "
+                            + parseInt(this.__data__.values['nwoundte']) );
+                   })
+                  .on('mouseout',function () {
+                        d3.select(this)
+                          .transition()
+                          .duration(10)
+                          .attr('fill', 'rgb(247, 148, 32)');
 
-                    svg.selectAll('circle').remove();
-                    svg.selectAll('circle')
-                    .data(data.filter(function(d){return +d.iyear === +year;}))
-                    .enter()
-                     .append("circle")
-                     .transition()
-                     .duration(150)
-                     .attr('cx', function(d) { return projection([+d.longitude, +d.latitude])[0]; })
-                     .attr('cy', function(d) { return projection([+d.longitude, +d.latitude])[1]; })
-                     .attr('r', function(d) {
+                        d3.select("h3")
+                          .text("mouse over a circle to see the number of casualties");
+                   });
+             }
+
+              function update(year){
+               // show a selected yeat
+
+                  d3.select("h2")
+                      .text("Global Terrorist Attacks in " + year);
+
+                  svg.selectAll('circle').remove();
+
+                  svg.selectAll('circle')
+                      .data(data.filter(function(d){return +d.iyear === +year;}))
+                      .enter()
+                      .append("circle")
+                      .transition()
+                      .duration(150)
+                      .attr('cx', function(d) { return projection([+d.longitude, +d.latitude])[0]; })
+                      .attr('cy', function(d) { return projection([+d.longitude, +d.latitude])[1]; })
+                      .attr('r', function(d) {
                           if(d.severe==""){return 1;}
                           return radius(d.severe);
-                     })
-                     .attr('fill', 'rgb(247, 148, 32)')
-                     .attr('stroke', 'black')
-                     .attr('stroke-width', 0.7)
-                     .attr('opacity', 0.5);
+                      })
+                      .attr('fill', 'rgb(247, 148, 32)')
+                      .attr('stroke', 'black')
+                      .attr('stroke-width', 0.7)
+                      .attr('opacity', 0.5);
 
-                    svg.selectAll("circle")
-                    .on('mouseover',function() {
-                      d3.select(this)
-           	          .transition()
-           	           .duration(10)
-           	            .attr('fill', 'red');
+                  svg.selectAll("circle")
+                      .on('mouseover',function() {
+                          d3.select(this)
+                            .transition()
+                            .duration(10)
+                            .attr('fill', 'red');
 
-                   d3.select("h3")
-                      .text(this.__data__['country_txt'] + " in " + this.__data__['iyear'] +
-                      ", "+ this.__data__['counts'] + " times terrorist attacks."
-                      + " Number of deaths: "+ this.__data__['nkillter']+"; Number of woundeds: "
-                      + this.__data__['nwoundte'] );
+                          d3.select("h3")
+                            .text(this.__data__['country_txt'] + " in " + this.__data__['iyear'] +
+                                ", "+ this.__data__['counts'] + " times terrorist attacks,"
+                                + " number of deaths: "+ parseInt(this.__data__['nkillter'])+"; number of woundeds: "
+                                + parseInt(this.__data__['nwoundte']) );
+                      })
+                      .on('mouseout',function () {
+                          d3.select(this)
+                            .transition()
+                            .duration(10)
+                            .attr('fill', 'rgb(247, 148, 32)');
 
-                       })
-                       .on('mouseout',function () {
-                         d3.select(this)
-                         .transition()
-                         .duration(10)
-                         .attr('fill', 'rgb(247, 148, 32)');
-
-                         d3.select("h3")
-                         .text("mouse over a circle to see the number of casualties");
-                       });
-
-
-
+                          d3.select("h3")
+                            .text("mouse over a circle to see the number of casualties");
+                     });
             }
 
             var year_idx = 0;
-
-
+            add_legend();
 
             var year_interval = setInterval(function() {
-              //data = d3.csv("agg_terror.csv",function(d){return d;})
-              update(years[year_idx]);
-              year_idx++;
+              // start interval; show year after year
+                update(years[year_idx]);
+                year_idx++;
 
-              if(year_idx >= years.length) {
-                  clearInterval(year_interval);
+                if(year_idx >= years.length) {
+                    clearInterval(year_interval);
 
+                    d3.select("h3")
+                      .text("mouse over a circle to see the number of casualties");
 
-                  show_all();
+                    var buttons = d3.select("body")
+                                    .append("div")
+                                    .attr("class", "years_buttons")
+                                    .selectAll("div")
+                                    .data(years.slice(1, 25))
+                                    .enter()
+                                    .append("div")
+                                    .text(function(d) {
+                                          return d;
+                                    });
 
-                  d3.select("h3")
-                  .text("mouse over a circle to see the number of casualties");
-
-                  var buttons = d3.select("body")
-                          .append("div")
-                          .attr("class", "years_buttons")
-                          .selectAll("div")
-                          .data(years.slice(1, 25))
-                          .enter()
-                          .append("div")
-                          .text(function(d) {
-                              return d;
-                          });
-
-                  var buttons2 = d3.select("body")
-                          .append("div")
-                          .attr("class", "years_buttons2")
-                          .selectAll("div")
-                          .data(years.slice(25, 48))
-                          .enter()
-                          .append("div")
-                          .text(function(d) {
-                              return d;
-                          });
-
+                    var buttons2 = d3.select("body")
+                                      .append("div")
+                                      .attr("class", "years_buttons2")
+                                      .selectAll("div")
+                                      .data(years.slice(25, 48))
+                                      .enter()
+                                      .append("div")
+                                      .text(function(d) {
+                                          return d;
+                                      });
 
                   var totalButton = d3.select("body")
-                              .append("button")
-                              .text("total")
-                              .attr("class", "total_button");
+                                      .append("button")
+                                      .text("All casualties 1970-2016")
+                                      .attr("class", "total_button");
 
                   totalButton.on("click", function(d) {
                       d3.select(".years_buttons")
@@ -290,24 +355,31 @@
                         .style("background", "Blue")
                         .style("color", "white");
 
-                      show_all();
+                      show_all_year();
+
                   });
 
                   function reset_button_color(){
+                    // reset button color when other buttons are clicked
                     d3.select(".years_buttons")
                       .selectAll("div")
                       .transition()
-                      .duration(200)
+                      .duration(100)
                       .style("color", "black")
                       .style("background", "lightBlue");
 
                     d3.select(".years_buttons2")
                       .selectAll("div")
                       .transition()
-                      .duration(200)
+                      .duration(100)
                       .style("color", "black")
                       .style("background", "lightBlue");
 
+                    d3.select('.total_button')
+                      .transition()
+                      .duration(100)
+                      .style("color", "black")
+                      .style("background", "lightBlue");
                   }
 
                   buttons.on("click", function(d) {
@@ -331,21 +403,12 @@
 
                       update(d);
                   });
-
               }
             }, 300);
-
-
         }
 
-
-
+        // start to plot from here
         d3.csv("terror.csv",plot_points);
-
-
-
-
-
       };
       </script>
   </head>
